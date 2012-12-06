@@ -74,6 +74,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
+    # TODO maybe better to default to using mountpoint of
+    # ~/.sshconfigfs ?
     ssh_dir = os.path.join(os.path.expanduser('~'), '.ssh')
     mountpoint = os.path.join(ssh_dir, '.sshconfigfs')
     if not os.path.exists(mountpoint):
