@@ -28,7 +28,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
         # generate config
         self.config = ''
-        for conf_chunk in glob.glob("{}/[0-9]*".format(self.configd_dir)):
+        for conf_chunk in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
             print "{} is being included".format(conf_chunk)
             self.config += file(conf_chunk, 'r').read()
         self.config_size = len(self.config)
