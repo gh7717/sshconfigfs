@@ -11,6 +11,8 @@ from time import sleep, time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
+# TODO is there a "file" type object belonging to FUSE?  Would be
+# better to extend that.
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -27,12 +29,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
         # generate config
         self.config = ''
-        for conf_chunk in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
+        for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
             try:
-                self.config += file(conf_chunk, 'r').read()
-                print "{} was included".format(conf_chunk)
+                self.config += file(conf_file, 'r').read()
+                print "{} was included".format(conf_file)
             except IOError:
-                print "IOError while tring to read {}: skipping!".format(conf_chunk)
+                print "IOError while tring to read {}: skipping!".format(conf_file)
                 continue
         self.config_size = len(self.config)
 
@@ -46,16 +48,17 @@ class SSHConfigFS(LoggingMixIn, Operations):
             # TODO the nlink value needs to be calculated based on
             # size of generated content, or an error is generated
             # saying too much data was read!
+            # TODO use 'defaultdict' to avoid all the st_ repitition?
             fattr = {
                 '/': dict(st_mode=(S_IFDIR | 0550),
-                          st_uid=os.getuid(),
+                          st_uid=os.getuid(), # or user requested
                           st_gid=os.getgid(),
                           st_nlink=2,
                           st_ctime=self.now,
                           st_mtime=self.now,
                           st_atime=self.now),
                 '/config': dict(st_mode=(S_IFREG | 0440),
-                                st_uid=os.getuid(),
+                                st_uid=os.getuid(), # or user requested
                                 st_gid=os.getgid(),
                                 st_size=self.config_size,
                                 st_nlink=2,
@@ -88,6 +91,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
+    # TODO should take arguments for: user, config.d location, and?
+
     # TODO maybe better to default to using mountpoint of
     # ~/.sshconfigfs ?
     ssh_dir = os.path.join(os.path.expanduser('~'), '.ssh')
