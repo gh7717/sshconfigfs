@@ -17,6 +17,11 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+global configLock
+global configDict
+configLock = threading.Lock()
+configDict = dict(config='', config_length=0)
+
 
 class SSHConfigFS(LoggingMixIn, Operations):
     """Builds ssh's config file dynamically.
@@ -26,21 +31,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
         self.now = time()
         self.ssh_dir = ssh_dir
         self.configd_dir = configd_dir
-
-        # generate config
-        self.config = ''
-        for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
-            try:
-                self.config += file(conf_file, 'r').read()
-                print "{} was included".format(conf_file)
-            except IOError:
-                print "IOError while tring to read {}: skipping!".format(conf_file)
-                continue
-        self.config_size = len(self.config)
+        self.generate_config()
 
     def init(self, arg):
-        # start the self.configd_dir watcher
-        t = threading.Thread(target=self.dir_watcher)
+        # start the thread which polls configd_dir for changes to
+        # contained files
+        t = threading.Thread(target=self.dir_poller)
         t.start()
 
     def getattr(self, path, fh=None):
@@ -60,7 +56,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 '/config': dict(st_mode=(S_IFREG | 0440),
                                 st_uid=os.getuid(), # or user requested
                                 st_gid=os.getgid(),
-                                st_size=self.config_size,
+                                st_size=len(configDict['config']),
                                 st_nlink=2,
                                 st_ctime=self.now,
                                 st_mtime=self.now,
@@ -72,19 +68,38 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
     def read(self, path, size, offset, fh):
         if path == '/config':
-            return self.config
+            return configDict['config']
 
     def readdir(self, path, fh):
         return ['.', '..', 'config',]
 
-    def dir_watcher(self):
-        """Monitors the configd_dir for changes, rebuilding the config
-        when required."""
-        # TODO
+    def dir_poller(self):
+        """Polls the configd_dir for changes, rebuilding the config
+        when required.
+
+        This is started as a thread from within the init() (not
+        __init__) method."""
+        orig_mod_timestamp = os.stat(self.configd_dir).st_mtime
         while True:
-            #print self.config_size
-            sleep(10)
-        return
+            sleep(0.5)
+            now_mod_timestamp = os.stat(self.configd_dir).st_mtime
+            if now_mod_timestamp != orig_mod_timestamp:
+                self.generate_config()
+                orig_mod_timestamp = now_mod_timestamp
+
+    def generate_config(self):
+        # TODO self.config needs to be updated in a threadsafe manner
+        configLock.acquire()
+        configDict['config'] = ''
+        for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
+            try:
+                configDict['config'] += file(conf_file, 'r').read()
+                configDict['config_length'] = len(configDict['config'])
+                print "{} was included".format(conf_file)
+            except IOError:
+                print "IOError while tring to read {}: skipping!".format(conf_file)
+                continue
+        configLock.release()
 
     # def destroy(self, path):
     #     pass
