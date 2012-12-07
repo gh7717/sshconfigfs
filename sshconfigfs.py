@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-
-#from collections import defaultdict
+# FUSE filesystem to build SSH config file dynamically.
+# Mark Hellewell <mark.hellewell@gmail.com>
 import glob
 import logging
 import os
+from stat import S_IFDIR, S_IFREG
+#from sys import argv, exit
 import threading
-from stat import S_IFDIR, S_IFLNK, S_IFREG
-from sys import argv, exit
 from time import sleep, time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
