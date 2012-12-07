@@ -88,9 +88,9 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 orig_mod_timestamp = now_mod_timestamp
 
     def generate_config(self):
-        # TODO self.config needs to be updated in a threadsafe manner
         configLock.acquire()
         configDict['config'] = ''
+        configDict['config_length'] = 0
         for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
             try:
                 configDict['config'] += file(conf_file, 'r').read()
