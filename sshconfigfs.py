@@ -40,6 +40,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
         t.start()
 
     def getattr(self, path, fh=None):
+        print "getattr was asked for {}".format(path)
         try:
             # TODO the nlink value needs to be calculated based on
             # size of generated content, or an error is generated
