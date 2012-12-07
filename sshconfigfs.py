@@ -30,8 +30,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
         # generate config
         self.config = ''
         for conf_chunk in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
-            print "{} is being included".format(conf_chunk)
-            self.config += file(conf_chunk, 'r').read()
+            try:
+                self.config += file(conf_chunk, 'r').read()
+                print "{} was included".format(conf_chunk)
+            except IOError:
+                print "IOError while tring to read {}: skipping!".format(conf_chunk)
+                continue
         self.config_size = len(self.config)
 
     def init(self, arg):
