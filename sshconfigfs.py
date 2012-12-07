@@ -75,11 +75,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
         return ['.', '..', 'config',]
 
     def dir_poller(self):
-        """Polls the configd_dir for changes, rebuilding the config
-        when required.
+        """Not part of the FUSE API, this polls the configd_dir for
+        changes, rebuilding the config when required.
 
         This is started as a thread from within the init() (not
-        __init__) method."""
+        __init__) method.
+        """
         orig_mod_timestamp = os.stat(self.configd_dir).st_mtime
         while True:
             sleep(0.5)
@@ -89,6 +90,9 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 orig_mod_timestamp = now_mod_timestamp
 
     def generate_config(self):
+        """Not part of the FUSE API, this combines files from
+        configd_dir into a single config "file".
+        """
         configLock.acquire()
         configDict['config'] = ''
         configDict['config_length'] = 0
