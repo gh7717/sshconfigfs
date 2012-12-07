@@ -4,9 +4,10 @@
 import glob
 import logging
 import os
+import threading
 from stat import S_IFDIR, S_IFLNK, S_IFREG
 from sys import argv, exit
-from time import time
+from time import sleep, time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
@@ -32,9 +33,11 @@ class SSHConfigFS(LoggingMixIn, Operations):
             print "{} is being included".format(conf_chunk)
             self.config += file(conf_chunk, 'r').read()
         self.config_size = len(self.config)
-        # TODO I'd like to "watch" the contents of the
-        # self.configd_dir for changes to files, so the config can be
-        # rebuilt.
+
+    def init(self, arg):
+        # start the self.configd_dir watcher
+        t = threading.Thread(target=self.dir_watcher)
+        t.start()
 
     def getattr(self, path, fh=None):
         try:
@@ -68,6 +71,16 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         return ['.', '..', 'config',]
+
+
+    def dir_watcher(self):
+        """Monitors the configd_dir for changes, rebuilding the config
+        when required."""
+        # TODO
+        while True:
+            print self.config_size
+            sleep(10)
+        return
 
     # def destroy(self, path):
     #     pass
