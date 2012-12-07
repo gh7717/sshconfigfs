@@ -56,7 +56,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 '/config': dict(st_mode=(S_IFREG | 0440),
                                 st_uid=os.getuid(), # or user requested
                                 st_gid=os.getgid(),
-                                st_size=len(configDict['config']),
+                                st_size=configDict['config_length'],
                                 st_nlink=2,
                                 st_ctime=self.now,
                                 st_mtime=self.now,
