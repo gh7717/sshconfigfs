@@ -20,12 +20,10 @@ class SSHConfigFS(LoggingMixIn, Operations):
     """Builds ssh's config file dynamically.
     """
 
-    def __init__(self, ssh_dir):
+    def __init__(self, ssh_dir, configd_dir):
         self.now = time()
         self.ssh_dir = ssh_dir
-        self.configd_dir = os.path.join(self.ssh_dir, 'config.d')
-        if not os.path.exists(self.configd_dir):
-            os.mkdir(self.configd_dir)
+        self.configd_dir = configd_dir
 
         # generate config
         self.config = ''
@@ -76,13 +74,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         return ['.', '..', 'config',]
 
-
     def dir_watcher(self):
         """Monitors the configd_dir for changes, rebuilding the config
         when required."""
         # TODO
         while True:
-            print self.config_size
+            #print self.config_size
             sleep(10)
         return
 
@@ -94,7 +91,15 @@ if __name__ == '__main__':
     # TODO maybe better to default to using mountpoint of
     # ~/.sshconfigfs ?
     ssh_dir = os.path.join(os.path.expanduser('~'), '.ssh')
+
+    # directory containing ssh config chunks
+    configd_dir = os.path.join(ssh_dir, 'config.d')
+    if not os.path.exists(configd_dir):
+        os.mkdir(configd_dir)
+
+    # where our filesystem will be mounted
     mountpoint = os.path.join(ssh_dir, '.sshconfigfs')
     if not os.path.exists(mountpoint):
         os.mkdir(mountpoint)
-    fuse = FUSE(SSHConfigFS(ssh_dir), mountpoint, foreground=True)
+
+    fuse = FUSE(SSHConfigFS(ssh_dir, configd_dir), mountpoint, foreground=True)
