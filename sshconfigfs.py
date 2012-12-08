@@ -32,12 +32,6 @@ class SSHConfigFS(LoggingMixIn, Operations):
         self.configd_dir = configd_dir
         self.generate_config()
 
-    def init(self, arg):
-        # start the thread which polls configd_dir for changes to
-        # contained files, which event triggers config file rebuild.
-        t = threading.Thread(target=self.dir_poller)
-        t.start()
-
     def getattr(self, path, fh=None):
         # TODO replace print with logger
         print "getattr was asked for {}".format(path)
@@ -75,6 +69,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         return ['.', '..', 'config',]
 
+    def init(self, arg):
+        # start the thread which polls configd_dir for changes to
+        # contained files, which event triggers config file rebuild.
+        t = threading.Thread(target=self.dir_poller)
+        t.start()
+
     #
     # none-FUSE methods, below
     #
@@ -84,7 +84,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
         changed mtime.  A changed mtime triggers rebuilding of the
         combined config.
 
-        This is started as a thread from within the init() (not
+        This is started as a thread from within the init (not
         __init__) method.
         """
         orig_mod_timestamp = os.stat(self.configd_dir).st_mtime
