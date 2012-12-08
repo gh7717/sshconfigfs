@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # FUSE filesystem to build SSH config file dynamically.
 # Mark Hellewell <mark.hellewell@gmail.com>
+from errno import ENOENT
 import glob
-import logging
+#import logging
 import os
 from stat import S_IFDIR, S_IFREG
 #from sys import argv, exit
@@ -11,16 +12,11 @@ from time import sleep, time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-# TODO is there a "file" type object belonging to FUSE?  Would be
-# better to extend that.
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+#logger = logging.getLogger()
+#logger.setLevel(logging.INFO)
 
 global configLock
-global configDict
 configLock = threading.Lock()
-configDict = dict(config='', config_length=0)
 
 
 class SSHConfigFS(LoggingMixIn, Operations):
@@ -28,46 +24,44 @@ class SSHConfigFS(LoggingMixIn, Operations):
     for ssh.
     """
     def __init__(self, configd_dir):
-        self.now = time()
+        now = time()
+        # configd_dir is the directory to be watched by
+        # self.dir_poller from a separate thread.
         self.configd_dir = configd_dir
+        # initialise the list of "files". '/' is mandatory. '/config'
+        # is where our combined ssh config lives.
+        self.files = {
+            '/': dict(st_mode=(S_IFDIR | 0550), st_uid=os.getuid(),
+                      st_gid=os.getgid(), st_nlink=2, st_ctime=now,
+                      st_mtime=now, st_atime=now),
+            '/config': dict(st_mode=(S_IFREG | 0440),
+                            st_uid=os.getuid(),
+                            st_gid=os.getgid(), st_size=0, st_nlink=1,
+                            st_ctime=now, st_mtime=now, st_atime=now)
+            }
+        self.ssh_config = ''
+        # we just started up, so generate the ssh config right now.
         self.generate_config()
 
     def getattr(self, path, fh=None):
-        # TODO replace print with logger
-        print "getattr was asked for {}".format(path)
-        # TODO replace with defaultdict(bytes) usage?
-        try:
-            # TODO the nlink value needs to be calculated based on
-            # size of generated content, or an error is generated
-            # saying too much data was read!
-            # TODO use 'defaultdict' to avoid all the st_ repitition?
-            fattr = {
-                '/': dict(st_mode=(S_IFDIR | 0550),
-                          st_uid=os.getuid(), # or user requested
-                          st_gid=os.getgid(),
-                          st_nlink=2,
-                          st_ctime=self.now,
-                          st_mtime=self.now,
-                          st_atime=self.now),
-                '/config': dict(st_mode=(S_IFREG | 0440),
-                                st_uid=os.getuid(), # or user requested
-                                st_gid=os.getgid(),
-                                st_size=configDict['config_length'],
-                                st_nlink=2,
-                                st_ctime=self.now,
-                                st_mtime=self.now,
-                                st_atime=self.now),
-                }[path]
-            return fattr
-        except KeyError:
-            return dict()
+        if path not in self.files:
+            raise FuseOSError(ENOENT)
+        return self.files[path]
 
     def read(self, path, size, offset, fh):
-        if path == '/config':
-            return configDict['config']
+        # returns the contents of the '/config' "file", and updates
+        # its st_atime.
+        if path != '/config':
+            raise FuseOSError(ENOENT)
+        configLock.acquire()
+        self.files['/config']['st_atime'] = time()
+        configLock.release()
+        return self.ssh_config[offset:offset + size]
 
     def readdir(self, path, fh):
-        return ['.', '..', 'config',]
+        # '.' and '..' must be returned here.  We add 'config', since
+        # that's the only other "file" in our filesystem!
+        return ['.', '..', 'config']
 
     def init(self, arg):
         # start the thread which polls configd_dir for changes to
@@ -127,14 +121,12 @@ class SSHConfigFS(LoggingMixIn, Operations):
         included in final output, only that the name start with a
         number.
         """
-        configLock.acquire()
-        configDict['config'] = ''
-        configDict['config_length'] = 0
         # use shell style globbing, to allow control of the order in
         # which config chunks are included in the final output.
+        new_ssh_config = ''
         for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
             try:
-                configDict['config'] += file(conf_file, 'r').read()
+                new_ssh_config += file(conf_file, 'r').read()
             except IOError as exc:
                 # TODO replace print with logger
                 print "IOError ({0}) while tring to read {1}: {2}".format(
@@ -146,9 +138,20 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 print "Unexpected exception: {}".format(exc)
                 continue
             else:
-                configDict['config_length'] = len(configDict['config'])
                 # TODO replace print with logger
                 print "{} was included".format(conf_file)
+
+        configLock.acquire()
+        # update content and size
+        self.ssh_config = new_ssh_config
+        self.files['/config']['st_size'] = len(self.ssh_config)
+
+        # update mtime and atime of '/config' and '/'
+        now = time()
+        for attr in ('st_mtime', 'st_atime'):
+            self.files['/config'][attr] = now
+            self.files['/'][attr] = now
+
         # Gone through all files and, hopefully, built a config.  Time
         # to release our lock!
         configLock.release()
