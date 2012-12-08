@@ -40,6 +40,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
         t.start()
 
     def getattr(self, path, fh=None):
+        # TODO replace print with logger
         print "getattr was asked for {}".format(path)
         try:
             # TODO the nlink value needs to be calculated based on
@@ -76,7 +77,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
     def dir_poller(self):
         """Not part of the FUSE API, this polls the configd_dir for
-        changes, rebuilding the config when required.
+        changes, which trigger rebuilding of the combined config.
 
         This is started as a thread from within the init() (not
         __init__) method.
@@ -84,26 +85,63 @@ class SSHConfigFS(LoggingMixIn, Operations):
         orig_mod_timestamp = os.stat(self.configd_dir).st_mtime
         while True:
             sleep(0.5)
-            now_mod_timestamp = os.stat(self.configd_dir).st_mtime
+            try:
+                now_mod_timestamp = os.stat(self.configd_dir).st_mtime
+            except OSError:
+                continue
             if now_mod_timestamp != orig_mod_timestamp:
+                # configd_dir has seen changes (its mtime has
+                # changed), so it's time to generate new config and
+                # save the new timestamp for later comparisons.
                 self.generate_config()
                 orig_mod_timestamp = now_mod_timestamp
 
     def generate_config(self):
         """Not part of the FUSE API, this combines files from
         configd_dir into a single config "file".
+
+        It uses shell style "globbing" of files, whose names start
+        with a number, to allow control of the order in which config
+        chunks are included in the final combined output.
+
+        e.g. the directory referenced by configd_dir might contain
+        files named:
+
+            01_start
+            05_tunnels
+            10_workhosts
+            30_personalhosts
+
+        The generated ssh config would thus contain the contents of
+        these files, in the order in which they appear above.
+
+        An underscore in the name is not necessary for the file to be
+        included in final output, only that the name start with a
+        number.
         """
         configLock.acquire()
         configDict['config'] = ''
         configDict['config_length'] = 0
+        # use shell style globbing, to allow control of the order in
+        # which config chunks are included in the final output.
         for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
             try:
                 configDict['config'] += file(conf_file, 'r').read()
-                configDict['config_length'] = len(configDict['config'])
-                print "{} was included".format(conf_file)
-            except IOError:
-                print "IOError while tring to read {}: skipping!".format(conf_file)
+            except IOError as exc:
+                # TODO replace print with logger
+                print "IOError ({0}) while tring to read {1}: {2}".format(
+                    exc.errno, conf_file, exc.strerror)
                 continue
+            except Exception as exc:
+                # TODO replace print with logger
+                print "Unexpected exception: {}".format(exc)
+                continue
+            else:
+                configDict['config_length'] = len(configDict['config'])
+                # TODO replace print with logger
+                print "{} was included".format(conf_file)
+        # Gone through all files and, hopefully, built a config.  Time
+        # to release our lock!
         configLock.release()
 
     # def destroy(self, path):
