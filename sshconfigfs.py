@@ -34,7 +34,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
     def init(self, arg):
         # start the thread which polls configd_dir for changes to
-        # contained files
+        # contained files, which event triggers config file rebuild.
         t = threading.Thread(target=self.dir_poller)
         t.start()
 
