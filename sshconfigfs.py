@@ -151,8 +151,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 if __name__ == '__main__':
     # TODO should take arguments for: user, config.d location, and?
 
-    # TODO maybe better to default to using mountpoint of
-    # ~/.sshconfigfs ?
+    # user's .ssh directory
     ssh_dir = os.path.join(os.path.expanduser('~'), '.ssh')
 
     # directory containing ssh config chunks
@@ -161,7 +160,7 @@ if __name__ == '__main__':
         os.mkdir(configd_dir)
 
     # where our filesystem will be mounted
-    mountpoint = os.path.join(ssh_dir, '.sshconfigfs')
+    mountpoint = os.path.join(os.path.expanduser('~'), '.sshconfigfs')
     if not os.path.exists(mountpoint):
         os.mkdir(mountpoint)
 
