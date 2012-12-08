@@ -24,12 +24,11 @@ configDict = dict(config='', config_length=0)
 
 
 class SSHConfigFS(LoggingMixIn, Operations):
-    """Builds ssh's config file dynamically.
+    """A simple FUSE filesystem which dynamically builds a config file
+    for ssh.
     """
-
-    def __init__(self, ssh_dir, configd_dir):
+    def __init__(self, configd_dir):
         self.now = time()
-        self.ssh_dir = ssh_dir
         self.configd_dir = configd_dir
         self.generate_config()
 
@@ -42,6 +41,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         # TODO replace print with logger
         print "getattr was asked for {}".format(path)
+        # TODO replace with defaultdict(bytes) usage?
         try:
             # TODO the nlink value needs to be calculated based on
             # size of generated content, or an error is generated
@@ -75,9 +75,14 @@ class SSHConfigFS(LoggingMixIn, Operations):
     def readdir(self, path, fh):
         return ['.', '..', 'config',]
 
+    #
+    # none-FUSE methods, below
+    #
+
     def dir_poller(self):
-        """Not part of the FUSE API, this polls the configd_dir for
-        changes, which trigger rebuilding of the combined config.
+        """Not part of the FUSE API, this polls the configd_dir for a
+        changed mtime.  A changed mtime triggers rebuilding of the
+        combined config.
 
         This is started as a thread from within the init() (not
         __init__) method.
@@ -88,13 +93,16 @@ class SSHConfigFS(LoggingMixIn, Operations):
             try:
                 now_mod_timestamp = os.stat(self.configd_dir).st_mtime
             except OSError:
+                # TODO couldn't get the mtime of the configd_dir!
+                # wtf!  I think it's time to exit cleanly?
                 continue
-            if now_mod_timestamp != orig_mod_timestamp:
-                # configd_dir has seen changes (its mtime has
-                # changed), so it's time to generate new config and
-                # save the new timestamp for later comparisons.
-                self.generate_config()
-                orig_mod_timestamp = now_mod_timestamp
+            else:
+                if now_mod_timestamp != orig_mod_timestamp:
+                    # configd_dir has seen changes (its mtime has
+                    # changed), so it's time to generate new config and
+                    # save the new timestamp for later comparisons.
+                    self.generate_config()
+                    orig_mod_timestamp = now_mod_timestamp
 
     def generate_config(self):
         """Not part of the FUSE API, this combines files from
@@ -133,7 +141,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
                     exc.errno, conf_file, exc.strerror)
                 continue
             except Exception as exc:
-                # TODO replace print with logger
+                # TODO replace print with logger, and work out what to
+                # display from the exception caught.
                 print "Unexpected exception: {}".format(exc)
                 continue
             else:
@@ -151,7 +160,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
 if __name__ == '__main__':
     # TODO should take arguments for: user, config.d location, and?
 
-    # user's .ssh directory
+    # user's .ssh directory, to be used to automatically setup a
+    # symlink to dynamically generated config.
     ssh_dir = os.path.join(os.path.expanduser('~'), '.ssh')
 
     # directory containing ssh config chunks
@@ -164,4 +174,4 @@ if __name__ == '__main__':
     if not os.path.exists(mountpoint):
         os.mkdir(mountpoint)
 
-    fuse = FUSE(SSHConfigFS(ssh_dir, configd_dir), mountpoint, foreground=True)
+    fuse = FUSE(SSHConfigFS(configd_dir), mountpoint, foreground=True)
