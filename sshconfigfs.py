@@ -15,7 +15,6 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 #logger = logging.getLogger()
 #logger.setLevel(logging.INFO)
 
-global configLock
 configLock = threading.Lock()
 
 
@@ -53,10 +52,9 @@ class SSHConfigFS(LoggingMixIn, Operations):
         # its st_atime.
         if path != '/config':
             raise FuseOSError(ENOENT)
-        configLock.acquire()
-        self.files['/config']['st_atime'] = time()
-        configLock.release()
-        return self.ssh_config[offset:offset + size]
+        with configLock:
+            self.files['/config']['st_atime'] = time()
+            return self.ssh_config[offset:offset + size]
 
     def readdir(self, path, fh):
         # '.' and '..' must be returned here.  We add 'config', since
@@ -141,20 +139,16 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 # TODO replace print with logger
                 print "{} was included".format(conf_file)
 
-        configLock.acquire()
-        # update content and size
-        self.ssh_config = new_ssh_config
-        self.files['/config']['st_size'] = len(self.ssh_config)
+        with configLock:
+            # update content and size
+            self.ssh_config = new_ssh_config
+            self.files['/config']['st_size'] = len(self.ssh_config)
 
-        # update mtime and atime of '/config' and '/'
-        now = time()
-        for attr in ('st_mtime', 'st_atime'):
-            self.files['/config'][attr] = now
-            self.files['/'][attr] = now
-
-        # Gone through all files and, hopefully, built a config.  Time
-        # to release our lock!
-        configLock.release()
+            # update mtime and atime of '/config' and '/'
+            now = time()
+            for attr in ('st_mtime', 'st_atime'):
+                self.files['/config'][attr] = now
+                self.files['/'][attr] = now
 
     # def destroy(self, path):
     #     pass
