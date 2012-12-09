@@ -28,8 +28,20 @@ You should create a symbolic link from `~/.ssh/config` to the generated `~/.sshc
 
 To give another example of use, I have a *crontab* entry periodically generating *ssh* `Host…` config chunks—using data from VPS provider's APIs—which are then written to files inside `~/.ssh/config.d/`.  This keeps my config up to date without my having to manually manage a large, somewhat dynamic, list of hosts.
 
+## Run at startup
+
+I use OSX.  To keep `SSHConfigFS` running, I use the included `.plist` file to tell OSX's `launchd` to mount the filesystem.
+
+    mkdir -p ~/Library/LaunchAgents
+
+Edit the `com.markhellewell.SSHConfigFS.plist` file and change the path to the `sshconfigfs.py` script.  Then:
+
+    cp com.markhellewell.SSHConfigFS.plist ~/Library/LaunchAgents/
+    launchctl load -w ~/Library/LaunchAgents/com.markhellewell.SSHConfigFS.plist
+
+This will keep the `SSHConfigFS` mounted, as your user, forever.
+
 ## TODO
 
 * dæmonized mode support (at the moment will only run in the foreground)
 * take arguments to configure `configd_dir` etc.
-* `.plist` for Mac OS X's `launchd`

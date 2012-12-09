@@ -196,4 +196,6 @@ if __name__ == '__main__':
         os.mkdir(mountpoint)
         logger.info('Created SSHConfigFS mountpoint {}'.format(mountpoint))
 
+    logger.info('starting')
     fuse = FUSE(SSHConfigFS(configd_dir), mountpoint, foreground=True)
+    logger.info('exited')
