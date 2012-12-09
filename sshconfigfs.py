@@ -32,16 +32,17 @@ class SSHConfigFS(LoggingMixIn, Operations):
         self.configd_dir = configd_dir
         # initialise the list of "files". '/' is mandatory. '/config'
         # is where our combined ssh config lives.
-        self.files = {
-            '/': dict(st_mode=(S_IFDIR | 0550), st_uid=os.getuid(),
-                      st_gid=os.getgid(), st_nlink=2, st_ctime=now,
-                      st_mtime=now, st_atime=now),
-            '/config': dict(st_mode=(S_IFREG | 0440),
-                            st_uid=os.getuid(),
-                            st_gid=os.getgid(), st_size=0, st_nlink=1,
-                            st_ctime=now, st_mtime=now, st_atime=now)
-            }
-        self.ssh_config = ''
+        with configLock:
+            self.files = {
+                '/': dict(st_mode=(S_IFDIR | 0550), st_uid=os.getuid(),
+                            st_gid=os.getgid(), st_nlink=2, st_ctime=now,
+                            st_mtime=now, st_atime=now),
+                '/config': dict(st_mode=(S_IFREG | 0440),
+                                st_uid=os.getuid(),
+                                st_gid=os.getgid(), st_size=0, st_nlink=1,
+                                st_ctime=now, st_mtime=now, st_atime=now)
+                }
+            self.ssh_config = ''
         # we just started up, so generate the ssh config right now.
         self.generate_config()
 
