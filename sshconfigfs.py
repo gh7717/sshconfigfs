@@ -167,9 +167,6 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 self.files['/config'][attr] = now
                 self.files['/'][attr] = now
 
-    # def destroy(self, path):
-    #     pass
-
 
 if __name__ == '__main__':
     # log to stderr and syslog
