@@ -12,8 +12,7 @@ from time import sleep, time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-# a handler to log to stderr
-stderrhandler = logging.StreamHandler()
+stderrhandler = logging.StreamHandler()  # a handler to log to stderr
 stderrhandler.setFormatter(
     logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
 
@@ -23,8 +22,7 @@ sysloghandler = logging.handlers.SysLogHandler(
 sysloghandler.setFormatter(
     logging.Formatter('%(name)s %(levelname)s %(message)s'))
 
-# a logger
-logger = logging.getLogger('SSHConfigFS')
+logger = logging.getLogger('SSHConfigFS')  # is there a standard?
 
 
 # used to synchronise access to the generated config file and its
@@ -36,6 +34,7 @@ configLock = threading.Lock()
 class SSHConfigFS(LoggingMixIn, Operations):
     """A simple FUSE filesystem which dynamically builds a config file
     for ssh.
+
     """
     def __init__(self, configd_dir):
         now = time()
@@ -96,6 +95,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
         This is started as a thread from within the init (not
         __init__) method.
+
         """
         orig_mod_timestamp = os.stat(self.configd_dir).st_mtime
         while True:
@@ -137,6 +137,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
         An underscore in the name is not necessary for the file to be
         included in final output, only that the name start with a
         number.
+
         """
         # use shell style globbing, to allow control of the order in
         # which config chunks are included in the final output.
