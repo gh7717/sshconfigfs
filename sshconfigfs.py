@@ -45,7 +45,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         if path not in self.files:
             raise FuseOSError(ENOENT)
-        return self.files[path]
+        with configLock:
+            return self.files[path]
 
     def read(self, path, size, offset, fh):
         # returns the contents of the '/config' "file", and updates
