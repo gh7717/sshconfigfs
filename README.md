@@ -8,7 +8,7 @@ If your `~/.ssh/config` is anything like mine, then it's pretty long (and only s
 
 Depends on the *fusepy* python package.  See `requirements.txt`.
 
-I wrote this on OSX, using the [Fuse4X](http://fuse4x.github.com/) kernel extension. The *fusepy* package also supports Linux FUSE so it should work well on that platform, too.
+I wrote this using Python 2.7.3 on OSX, with the [Fuse4X](http://fuse4x.github.com/) kernel extension. The *fusepy* package also supports Linux FUSE so it should work well on that platform, too.
 
 ## Explanation
 
