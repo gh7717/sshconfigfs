@@ -30,7 +30,6 @@ To give another example of use, I have a *crontab* entry periodically generating
 
 ## TODO
 
-* logging
 * dæmonized mode support (at the moment will only run in the foreground)
 * take arguments to configure `configd_dir` etc.
 * `.plist` for Mac OS X's `launchd`

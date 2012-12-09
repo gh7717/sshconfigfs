@@ -1,19 +1,33 @@
 #!/usr/bin/env python
 # FUSE filesystem to build SSH config file dynamically.
 # Mark Hellewell <mark.hellewell@gmail.com>
-from errno import ENOENT
-import glob
-#import logging
+import logging
+import logging.handlers
 import os
-from stat import S_IFDIR, S_IFREG
 #from sys import argv, exit
 import threading
+
+from errno import ENOENT
+from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+from glob import glob
+from stat import S_IFDIR, S_IFREG
 from time import sleep, time
 
-from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-#logger = logging.getLogger()
-#logger.setLevel(logging.INFO)
+# a handler to log to stderr
+stderrhandler = logging.StreamHandler()
+stderrhandler.setFormatter(
+    logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+
+# a handler to log to syslog
+sysloghandler = logging.handlers.SysLogHandler(
+    facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+sysloghandler.setFormatter(
+    logging.Formatter('%(name)s %(levelname)s %(message)s'))
+
+# a logger
+logger = logging.getLogger('SSHConfigFS')
+
 
 # used to synchronise access to the generated config file and its
 # attributes, since it's updated from a different thread to the main
@@ -44,6 +58,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 }
             self.ssh_config = ''
         # we just started up, so generate the ssh config right now.
+        logger.debug('Generating initial config')
         self.generate_config()
 
     def getattr(self, path, fh=None):
@@ -98,6 +113,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                     # configd_dir has seen changes (its mtime has
                     # changed), so it's time to generate new config and
                     # save the new timestamp for later comparisons.
+                    logger.debug('Generating combined config')
                     self.generate_config()
                     orig_mod_timestamp = now_mod_timestamp
 
@@ -127,22 +143,19 @@ class SSHConfigFS(LoggingMixIn, Operations):
         # use shell style globbing, to allow control of the order in
         # which config chunks are included in the final output.
         new_ssh_config = ''
-        for conf_file in glob.iglob("{}/[0-9]*".format(self.configd_dir)):
+        for conf_file in sorted(glob('{}/[0-9]*'.format(self.configd_dir))):
             try:
                 new_ssh_config += file(conf_file, 'r').read()
             except IOError as exc:
-                # TODO replace print with logger
-                print "IOError ({0}) while tring to read {1}: {2}".format(
-                    exc.errno, conf_file, exc.strerror)
+                logger.error(
+                    'IOError ({0}) while tring to read {1}: {2}'.format(
+                        exc.errno, conf_file, exc.strerror))
                 continue
             except Exception as exc:
-                # TODO replace print with logger, and work out what to
-                # display from the exception caught.
-                print "Unexpected exception: {}".format(exc)
+                logger.error('Unexpected exception: {}'.format(exc))
                 continue
             else:
-                # TODO replace print with logger
-                print "{} was included".format(conf_file)
+                logger.debug('{} was included'.format(conf_file))
 
         with configLock:
             # update content and size
@@ -160,6 +173,11 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
+    # log to stderr
+    logger.addHandler(stderrhandler)
+    logger.addHandler(sysloghandler)
+    logger.setLevel(logging.INFO)
+
     # TODO should take arguments for: user, config.d location, and?
 
     # user's .ssh directory, to be used to automatically setup a
@@ -170,10 +188,12 @@ if __name__ == '__main__':
     configd_dir = os.path.join(ssh_dir, 'config.d')
     if not os.path.exists(configd_dir):
         os.mkdir(configd_dir)
+        logger.info('Created empty {}'.format(configd_dir))
 
     # where our filesystem will be mounted
     mountpoint = os.path.join(os.path.expanduser('~'), '.sshconfigfs')
     if not os.path.exists(mountpoint):
         os.mkdir(mountpoint)
+        logger.info('Created SSHConfigFS mountpoint {}'.format(mountpoint))
 
     fuse = FUSE(SSHConfigFS(configd_dir), mountpoint, foreground=True)
