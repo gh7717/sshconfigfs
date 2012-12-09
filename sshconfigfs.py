@@ -15,6 +15,9 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 #logger = logging.getLogger()
 #logger.setLevel(logging.INFO)
 
+# used to synchronise access to the generated config file and its
+# attributes, since it's updated from a different thread to the main
+# FUSE thread.
 configLock = threading.Lock()
 
 
