@@ -1,18 +1,16 @@
 #!/usr/bin/env python
 # FUSE filesystem to build SSH config file dynamically.
 # Mark Hellewell <mark.hellewell@gmail.com>
+from errno import ENOENT
+from glob import glob
 import logging
 import logging.handlers
 import os
-#from sys import argv, exit
-import threading
-
-from errno import ENOENT
-from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
-from glob import glob
 from stat import S_IFDIR, S_IFREG
+import threading
 from time import sleep, time
 
+from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
 # a handler to log to stderr
 stderrhandler = logging.StreamHandler()
@@ -49,13 +47,13 @@ class SSHConfigFS(LoggingMixIn, Operations):
         with configLock:
             self.files = {
                 '/': dict(st_mode=(S_IFDIR | 0550), st_uid=os.getuid(),
-                            st_gid=os.getgid(), st_nlink=2, st_ctime=now,
-                            st_mtime=now, st_atime=now),
+                          st_gid=os.getgid(), st_nlink=2, st_ctime=now,
+                          st_mtime=now, st_atime=now),
                 '/config': dict(st_mode=(S_IFREG | 0440),
                                 st_uid=os.getuid(),
                                 st_gid=os.getgid(), st_size=0, st_nlink=1,
                                 st_ctime=now, st_mtime=now, st_atime=now)
-                }
+            }
             self.ssh_config = ''
         # we just started up, so generate the ssh config right now.
         logger.debug('Generating initial config')
