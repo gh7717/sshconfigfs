@@ -171,7 +171,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
 
 if __name__ == '__main__':
-    # log to stderr
+    # log to stderr and syslog
     logger.addHandler(stderrhandler)
     logger.addHandler(sysloghandler)
     logger.setLevel(logging.INFO)
