@@ -1,6 +1,6 @@
 # SSHConfigFS
 
-`SSHConfigFS` is a FUSE filesystem to build SSH config files on–the–fly.
+`SSHConfigFS` is a FUSE filesystem to build SSH client config files on–the–fly.
 
 If your `~/.ssh/config` is anything like mine, then it's pretty long (and only seems to grow).  Rather than having to continue managing one big file, I wrote this FUSE filesystem to instead build a config "file" dynamically from many smaller logical chunks.
 
