@@ -30,7 +30,7 @@ To give another example of use, I have a *crontab* entry periodically generating
 
 ## Run at startup
 
-I use OSX.  To keep `SSHConfigFS` running, I use the included `.plist` file to tell OSX's `launchd` to mount the filesystem.
+I use OSX.  To keep `SSHConfigFS` running, I use the included `.plist` file to tell OSX's `launchd` to run the `sshconfigfs.py` script to mount the filesystem.
 
     mkdir -p ~/Library/LaunchAgents
 
