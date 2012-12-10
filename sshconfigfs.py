@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # FUSE filesystem to build SSH config file dynamically.
 # Mark Hellewell <mark.hellewell@gmail.com>
-from errno import ENOENT
-from glob import glob
+import errno
+import glob
 import logging
 import logging.handlers
 import os
-from stat import S_IFDIR, S_IFREG
+import stat
 import threading
-from time import sleep, time
+import time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
@@ -37,7 +37,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
     """
     def __init__(self, configd_dir):
-        now = time()
+        now = time.time()
         # configd_dir is the directory to be watched by
         # self.dir_poller from a separate thread.
         self.configd_dir = configd_dir
@@ -45,10 +45,10 @@ class SSHConfigFS(LoggingMixIn, Operations):
         # is where our combined ssh config lives.
         with configLock:
             self.files = {
-                '/': dict(st_mode=(S_IFDIR | 0550), st_uid=os.getuid(),
+                '/': dict(st_mode=(stat.S_IFDIR | 0550), st_uid=os.getuid(),
                           st_gid=os.getgid(), st_nlink=2, st_ctime=now,
                           st_mtime=now, st_atime=now),
-                '/config': dict(st_mode=(S_IFREG | 0440),
+                '/config': dict(st_mode=(stat.S_IFREG | 0440),
                                 st_uid=os.getuid(),
                                 st_gid=os.getgid(), st_size=0, st_nlink=1,
                                 st_ctime=now, st_mtime=now, st_atime=now)
@@ -60,7 +60,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         if path not in self.files:
-            raise FuseOSError(ENOENT)
+            raise FuseOSError(errno.ENOENT)
         with configLock:
             return self.files[path]
 
@@ -68,9 +68,9 @@ class SSHConfigFS(LoggingMixIn, Operations):
         # returns the contents of the '/config' "file", and updates
         # its st_atime.
         if path != '/config':
-            raise FuseOSError(ENOENT)
+            raise FuseOSError(errno.ENOENT)
         with configLock:
-            self.files['/config']['st_atime'] = time()
+            self.files['/config']['st_atime'] = time.time()
             return self.ssh_config[offset:offset + size]
 
     def readdir(self, path, fh):
@@ -99,7 +99,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
         """
         orig_mod_timestamp = os.stat(self.configd_dir).st_mtime
         while True:
-            sleep(0.5)
+            time.sleep(0.5)
             try:
                 now_mod_timestamp = os.stat(self.configd_dir).st_mtime
             except OSError:
@@ -142,7 +142,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
         # use shell style globbing, to allow control of the order in
         # which config chunks are included in the final output.
         new_ssh_config = ''
-        for conf_file in sorted(glob('{}/[0-9]*'.format(self.configd_dir))):
+        for conf_file in sorted(
+                glob.glob('{}/[0-9]*'.format(self.configd_dir))):
             try:
                 new_ssh_config += file(conf_file, 'r').read()
             except IOError as exc:
@@ -162,7 +163,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
             self.files['/config']['st_size'] = len(self.ssh_config)
 
             # update mtime and atime of '/config' and '/'
-            now = time()
+            now = time.time()
             for attr in ('st_mtime', 'st_atime'):
                 self.files['/config'][attr] = now
                 self.files['/'][attr] = now
