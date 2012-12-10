@@ -24,7 +24,7 @@ For a chunk of config to be included in the final output, it must start with a n
 
 These files are combined in the order they appear above, using shell–style globbing, into a single "file" contained within the FUSE mountpoint `~/.sshconfigfs/` (the combined file is called `config`).
 
-You could create a symbolic link from `~/.ssh/config` to the generated `~/.sshconfigfs/config` file, so `ssh` can find it, or use the `-F` option to `ssh` to point it directly at the generated file.
+You could create a symbolic link from `~/.ssh/config` to the generated `~/.sshconfigfs/config` file, so `ssh` can find it, or use the `-F` argument to `ssh` to point it directly at the generated file.
 
 To give another example of use, I have a *crontab* entry periodically generating *ssh* `Host…` config chunks—using data from VPS provider's APIs—which are then written to files inside `~/.ssh/config.d/`.  This keeps my config up to date without my having to manually manage a large, somewhat dynamic, list of hosts.
 
