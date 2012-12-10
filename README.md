@@ -43,6 +43,6 @@ This will keep the `SSHConfigFS` mounted, as your user, forever.
 
 ## TODO
 
-* dæmonized mode support (at the moment will only run in the foreground)
+* dæmon mode support (at the moment will only run in the foreground)
 * take arguments to configure `configd_dir` etc.
 * pie shop?
