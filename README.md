@@ -46,3 +46,7 @@ This will keep the `SSHConfigFS` mounted, as your user, forever.
 * dæmon mode support (at the moment will only run in the foreground)
 * take arguments to configure `configd_dir` etc.
 * pie shop?
+
+## License
+
+The BSD License.  See LICENSE.
