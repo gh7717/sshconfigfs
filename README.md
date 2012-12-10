@@ -22,7 +22,7 @@ For a chunk of config to be included in the final output, it must start with a n
     20_workhosts
     30_personalhosts
 
-These files are combined in the order they appear in above, using shell–style globbing, into a single "file" contained within the FUSE mountpoint `~/.sshconfigfs/` (the combined file is called `config`).
+These files are combined in the order they appear above, using shell–style globbing, into a single "file" contained within the FUSE mountpoint `~/.sshconfigfs/` (the combined file is called `config`).
 
 You could create a symbolic link from `~/.ssh/config` to the generated `~/.sshconfigfs/config` file, so `ssh` can find it, or use the `-F` option to `ssh` to point it directly at the generated file.
 
