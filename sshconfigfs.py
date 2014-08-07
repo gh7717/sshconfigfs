@@ -12,6 +12,7 @@ import time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
+
 stderrhandler = logging.StreamHandler()  # a handler to log to stderr
 stderrhandler.setFormatter(
     logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
@@ -79,8 +80,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
         return ['.', '..', 'config']
 
     def init(self, arg):
-        # start the thread which polls configd_dir for changes to
-        # contained files, which event triggers config file rebuild.
+        # start the thread which polls configd_dir for a changed
+        # m_time, which triggers config file rebuild.
         t = threading.Thread(target=self.dir_poller)
         t.start()
 
@@ -145,6 +146,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
         for conf_file in sorted(
                 glob.glob('{}/[0-9]*'.format(self.configd_dir))):
             try:
+                # TODO if the file does not end with a blank line,
+                # insert one into the output
                 new_ssh_config += file(conf_file, 'r').read()
             except IOError as exc:
                 logger.error(
@@ -173,7 +176,7 @@ if __name__ == '__main__':
     # log to stderr and syslog
     logger.addHandler(stderrhandler)
     logger.addHandler(sysloghandler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # TODO should take arguments for: user, config.d location, and?
 
