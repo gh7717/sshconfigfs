@@ -49,7 +49,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 '/': dict(st_mode=(stat.S_IFDIR | 0550), st_uid=os.getuid(),
                           st_gid=os.getgid(), st_nlink=2, st_ctime=now,
                           st_mtime=now, st_atime=now),
-                '/config': dict(st_mode=(stat.S_IFREG | 0440),
+                '/config': dict(st_mode=(stat.S_IFREG | 0400),
                                 st_uid=os.getuid(),
                                 st_gid=os.getgid(), st_size=0, st_nlink=1,
                                 st_ctime=now, st_mtime=now, st_atime=now)
