@@ -4,17 +4,26 @@
 
 If your `~/.ssh/config` is anything like mine, then it's pretty long (and only seems to grow).  Rather than having to continue managing one big file, I wrote this FUSE filesystem to instead build a config "file" dynamically from many smaller logical chunks.
 
-## Requirements
+## OS Requirements
 
-Depends on the *fusepy* python package.  See `requirements.txt`.
+### OSX
 
-I wrote this using Python 2.7.3 on OSX, with the [Fuse4X](http://fuse4x.github.com/) kernel extension. The *fusepy* package also supports Linux FUSE so it should work well on that platform, too.
+Python 2.7 and the [osxfuse](https://osxfuse.github.io/) package ([Fuse4X](http://fuse4x.github.com/) also works, but that project is being merged with *osxfuse*).
 
-## Explanation
+### Linux
+
+TODO
+
+## Installation
+
+On OSX, first install [osxfuse](https://osxfuse.github.io/) (if you're using Homebrew it's available with `brew install osxfuse`), then install the python requirements: `pip install -r requirements.txt` installs only *fusepy*.
+
+## Running the filesystem
 
 To start, run the `sshconfigfs.py` script.  There are no arguments, yet, and it will run in the foreground.
 
 The directory `~/.ssh/config.d/` is monitored for changes to its `mtime`.  Whenever one of the files inside `~/.ssh/config.d/` changes, it triggers re-generation of the combined config. 
+
 For a chunk of config to be included in the final output, it must start with a number.  In `~/.ssh/config.d/` I keep several files:
 
     10_base
