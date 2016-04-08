@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+/#!/usr/bin/env python
 # FUSE filesystem to build SSH config file dynamically.
 # Mark Hellewell <mark.hellewell@gmail.com>
 import errno
@@ -12,6 +12,7 @@ import time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
+DEBUG = false
 
 stderrhandler = logging.StreamHandler()  # a handler to log to stderr
 stderrhandler.setFormatter(
@@ -56,7 +57,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
             }
             self.ssh_config = ''
         # we just started up, so generate the ssh config right now.
-        logger.debug('Generating initial config')
+	if DEBUG:
+             logger.debug('Generating initial config')
         self.generate_config()
 
     def getattr(self, path, fh=None):
@@ -112,7 +114,8 @@ class SSHConfigFS(LoggingMixIn, Operations):
                     # configd_dir has seen changes (its mtime has
                     # changed), so it's time to generate new config and
                     # save the new timestamp for later comparisons.
-                    logger.debug('Generating combined config')
+		    if DEBUG:
+                        logger.debug('Generating combined config')
                     self.generate_config()
                     orig_mod_timestamp = now_mod_timestamp
 
@@ -158,8 +161,9 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 logger.error('Unexpected exception: {}'.format(exc))
                 continue
             else:
-                logger.debug('{} was included'.format(conf_file))
-
+		if DEBUG:
+                    logger.debug('{} was included'.format(conf_file))
+                
         with configLock:
             # update content and size
             self.ssh_config = new_ssh_config
