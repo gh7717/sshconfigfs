@@ -5,6 +5,7 @@ import errno
 import glob
 import logging
 import logging.handlers
+import logging.config
 import os
 import stat
 import threading
@@ -12,8 +13,9 @@ import time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-_DEBUG_ = True
+logging.config.fileConfig('sshconfigfs.conf')
 
+# create console log handler
 stderrhandler = logging.StreamHandler()  # a handler to log to stderr
 stderrhandler.setFormatter(
     logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
@@ -25,7 +27,7 @@ sysloghandler.setFormatter(
     logging.Formatter('%(name)s %(levelname)s %(message)s'))
 
 logger = logging.getLogger('SSHConfigFS')  # is there a standard?
-
+#logger = logging.basicConfig(file_name='sshconfigfs.log', level=logging.WARNING)
 
 # used to synchronise access to the generated config file and its
 # attributes, since it's updated from a different thread to the main
@@ -57,8 +59,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
             }
             self.ssh_config = ''
         # we just started up, so generate the ssh config right now.
-	if _DEBUG_:
-             logger.debug('Generating initial config')
+        logger.info('Generating initial config')
         self.generate_config()
 
     def getattr(self, path, fh=None):
@@ -114,8 +115,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                     # configd_dir has seen changes (its mtime has
                     # changed), so it's time to generate new config and
                     # save the new timestamp for later comparisons.
-		    if _DEBUG_:
-                        logger.debug('Generating combined config')
+                    logger.debug('Generating combined config')
                     self.generate_config()
                     orig_mod_timestamp = now_mod_timestamp
 
@@ -161,8 +161,7 @@ class SSHConfigFS(LoggingMixIn, Operations):
                 logger.error('Unexpected exception: {}'.format(exc))
                 continue
             else:
-		if _DEBUG_:
-                    logger.debug('{} was included'.format(conf_file))
+                logger.info('{} was included'.format(conf_file))
                 pass     
         with configLock:
             # update content and size
@@ -180,7 +179,7 @@ if __name__ == '__main__':
     # log to stderr and syslog
     logger.addHandler(stderrhandler)
     logger.addHandler(sysloghandler)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
 
     # TODO should take arguments for: user, config.d location, and?
 
